@@ -237,7 +237,7 @@ function endGame(win, reason){
     blocker.innerHTML = `<h1>OFFICER DOWN</h1><p>${reason}</p><p style="font-size:18px;margin-top:10px">YOU WERE SHOT DOWN</p><p>Press R to restart - Full reset</p>`;
   } else {
     blocker.innerHTML = `<h1>SCENE SECURE</h1><p>All suspects neutralized</p>`;
-    setTimeout(()=>{ window.location.href = 'FourSuspectsPrelude.html'; }, 2200);
+    setTimeout(()=>{ window.location.href = 'foursuspectsprelude.html'; }, 2200);
   }
   document.exitPointerLock();
 }
@@ -831,4 +831,99 @@ function animate(){
   if(typeof streamChunks==="function") streamChunks();
   renderer.render(scene, camera);
 }
-</script></body></html>
+</script>  <!-- Gamache Apps unlock (key required outside the website demo) -->
+  <script>
+  (function () {
+    var APP = "SCENE";                                   // must match Stripe metadata "app"
+    var APP_NAME = "Scene Secure";
+    var APP_PATH = "/MySceneSecureGame";                            // pages of this app shown inside each other
+    var WEBSITE_PATH = "/MyGamacheAppsWebsite";         // demo window on this site runs free (site has its own timer)
+    var BUY_URL = "https://gamache61.github.io/MyGamacheAppsWebsite/";
+    var SERVER = "https://gamache-downloads.gamacheapps.workers.dev";
+
+    var P = "gamache_" + APP + "_";
+    function get(k) { try { return localStorage.getItem(P + k); } catch (e) { return null; } }
+    function set(k, v) { try { localStorage.setItem(P + k, v); } catch (e) {} }
+
+    if (get("unlocked") === "1") return;
+
+    // Running inside the website's demo window (or inside another page of this app)? Then that page is in charge.
+    try {
+      if (window.self !== window.top) {
+        var pp = window.parent.location.pathname;
+        if (pp.indexOf(WEBSITE_PATH) === 0 || pp.indexOf(APP_PATH) === 0) return;
+      }
+    } catch (e) { /* framed by another site: stay locked */ }
+
+    var device = get("device");
+    if (!device) {
+      device = (window.crypto && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()).replace(/[^a-zA-Z0-9-]/g, "");
+      set("device", device);
+    }
+
+    var css = document.createElement("style");
+    css.textContent =
+      "#gk-ov{position:fixed;inset:0;z-index:2147483647;background:#0b1118;display:flex;align-items:center;justify-content:center;padding:16px;font-family:system-ui,sans-serif}" +
+      "#gk-card{background:#1a2532;color:#e8eef5;border-radius:16px;padding:26px;max-width:400px;width:100%;text-align:center;box-shadow:0 10px 40px #000a}" +
+      "#gk-card h2{margin:0 0 8px;font-size:1.35rem;color:#e8eef5}#gk-card p{margin:6px 0 14px;opacity:.85;line-height:1.4;color:#e8eef5}" +
+      "#gk-key{width:100%;box-sizing:border-box;padding:12px;border-radius:10px;border:1px solid #3a4a5c;background:#0f1720;color:#ffd166;font:600 1.15rem ui-monospace,Consolas,monospace;text-align:center;text-transform:uppercase;letter-spacing:1px}" +
+      ".gk-b{display:block;width:100%;margin-top:10px;padding:13px;border:0;border-radius:10px;font:600 1rem system-ui,sans-serif;cursor:pointer;text-decoration:none;box-sizing:border-box}" +
+      "#gk-go{background:#2f8cff;color:#fff}#gk-buy{background:#ffd166;color:#111}" +
+      "#gk-msg{min-height:1.2em;margin-top:10px;font-size:.9rem;color:#ff8a8a}";
+    document.head.appendChild(css);
+
+    var ov = document.createElement("div");
+    ov.id = "gk-ov";
+    ov.innerHTML =
+      '<div id="gk-card"><h2>' + APP_NAME + '</h2><p>Enter the unlock key from your purchase page.</p>' +
+      '<input id="gk-key" placeholder="' + APP + '-XXXX-XXXX" autocomplete="off" spellcheck="false">' +
+      '<button class="gk-b" id="gk-go">Unlock</button>' +
+      '<a class="gk-b" id="gk-buy" href="' + BUY_URL + '" target="_blank" rel="noopener">Try the demo or buy ' + APP_NAME + '</a>' +
+      '<div id="gk-msg"></div></div>';
+
+    function mount() {
+      document.body.appendChild(ov);
+      document.getElementById("gk-go").onclick = activate;
+      var keyBox = document.getElementById("gk-key");
+      keyBox.addEventListener("keydown", function (e) { e.stopPropagation(); if (e.key === "Enter") activate(); });
+      // Keep the app's own keyboard controls from reacting while the key is typed.
+      keyBox.addEventListener("keyup", function (e) { e.stopPropagation(); });
+      keyBox.addEventListener("keypress", function (e) { e.stopPropagation(); });
+      setTimeout(function () { document.getElementById("gk-key").focus(); }, 50);
+    }
+
+    function activate() {
+      var key = document.getElementById("gk-key").value.trim().toUpperCase().replace(/\s+/g, "");
+      var msg = document.getElementById("gk-msg");
+      if (!key) { msg.textContent = "Type your key first."; return; }
+      msg.style.color = "#9fb3c8";
+      msg.textContent = "Checking…";
+      fetch(SERVER + "/activate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: key, app: APP, device: device })
+      })
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          if (d.ok) {
+            set("unlocked", "1");
+            set("key", key);
+            msg.style.color = "#7ee787";
+            msg.textContent = "Unlocked! Thank you.";
+            setTimeout(function () { ov.remove(); }, 900);
+          } else {
+            msg.style.color = "#ff8a8a";
+            msg.textContent = d.error || "That key didn't work.";
+          }
+        })
+        .catch(function () {
+          msg.style.color = "#ff8a8a";
+          msg.textContent = "No internet connection. Connect once to unlock — after that it works offline.";
+        });
+    }
+
+    if (document.body) mount(); else document.addEventListener("DOMContentLoaded", mount);
+  })();
+  </script>
+
+</body></html>
